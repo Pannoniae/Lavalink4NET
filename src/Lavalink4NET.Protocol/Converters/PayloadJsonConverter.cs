@@ -121,7 +121,7 @@ public sealed class PayloadJsonConverter : JsonConverter<IPayload>
 
         foreach (var (propertyName, propertyValue) in node!.AsObject())
         {
-            newNode[propertyName] = propertyValue.Deserialize<JsonNode>(); // TODO
+            newNode[propertyName] = propertyValue.Deserialize(ProtocolSerializerContext.Default.JsonNode);
         }
 
         newNode.WriteTo(writer, options);

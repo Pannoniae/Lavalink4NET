@@ -1,6 +1,7 @@
 ﻿namespace Lavalink4NET.Protocol;
 
 using System.Collections.Immutable;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Lavalink4NET.Protocol.Models;
 using Lavalink4NET.Protocol.Models.Filters;
@@ -38,6 +39,7 @@ using Lavalink4NET.Protocol.Responses;
 [JsonSerializable(typeof(SessionModel))]
 [JsonSerializable(typeof(RoutePlannerInformationModel))]
 [JsonSerializable(typeof(AddressUnmarkProperties))]
+[JsonSerializable(typeof(JsonNode))]
 internal sealed partial class ProtocolSerializerContext : JsonSerializerContext
 {
 }
