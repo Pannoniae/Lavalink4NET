@@ -273,6 +273,13 @@ public class QueuedLavalinkPlayer : LavalinkPlayer, IQueuedLavalinkPlayer
                     .AddAsync(peekedTrack, cancellationToken)
                     .ConfigureAwait(false);
             }
+
+            if (Queue.HasHistory)
+            {
+                await Queue.History
+                    .AddAsync(peekedTrack, cancellationToken)
+                    .ConfigureAwait(false);
+            }
         }
 
         if (count >= 0)
