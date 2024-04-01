@@ -192,7 +192,7 @@ public class QueuedLavalinkPlayer : LavalinkPlayer, IQueuedLavalinkPlayer
         ArgumentNullException.ThrowIfNull(queueItem);
 
         // Add track to history
-        if (Queue.HasHistory)
+        if (Queue.HasHistory && endReason is not TrackEndReason.Replaced)
         {
             await Queue.History
                 .AddAsync(queueItem, cancellationToken)
@@ -218,11 +218,24 @@ public class QueuedLavalinkPlayer : LavalinkPlayer, IQueuedLavalinkPlayer
         cancellationToken.ThrowIfCancellationRequested();
         EnsureNotDestroyed();
 
-        if (CurrentItem is not null && RepeatMode is TrackRepeatMode.Queue)
+        var currentItem = CurrentItem;
+
+        if (currentItem is not null)
         {
-            await Queue
-                .AddAsync(CurrentItem, cancellationToken)
-                .ConfigureAwait(false);
+            if (RepeatMode is TrackRepeatMode.Queue)
+            {
+                await Queue
+                    .AddAsync(currentItem, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            // "!Queue.IsEmpty" prevents adding the same track to the history twice since it will be also added in NotifyTrackEndedAsync
+            if (Queue.HasHistory && !Queue.IsEmpty)
+            {
+                await Queue.History
+                    .AddAsync(currentItem, cancellationToken)
+                    .ConfigureAwait(false);
+            }
         }
 
         var track = await GetNextTrackAsync(skipCount, respectTrackRepeat, cancellationToken).ConfigureAwait(false);
