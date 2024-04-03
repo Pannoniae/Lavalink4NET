@@ -6,6 +6,9 @@
 <!-- Center badges -->
 <p align="center"><b>High performance Lavalink wrapper for .NET</b></p>
 
+> [!IMPORTANT]
+> We now have a FAQ channel for quick questions on the Lavalink4NET Support Server
+
 [Lavalink4NET](https://github.com/angelobreuer/Lavalink4NET) is a [Lavalink](https://github.com/freyacodes/Lavalink) wrapper with node clustering, caching and custom players for .NET with support for [Discord.Net](https://github.com/RogueException/Discord.Net), [DSharpPlus](https://github.com/DSharpPlus/DSharpPlus/), [Remora](https://github.com/Remora/Remora.Discord), and [NetCord](https://github.com/KubaZ2/NetCord).
 
 [![Lavalink4NET Support Server Banner](https://discordapp.com/api/guilds/894533462428635146/embed.png?style=banner3)](https://discord.gg/cD4qTmnqRg)
