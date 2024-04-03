@@ -396,6 +396,7 @@ internal sealed class PlayerManager : IPlayerManager, IDisposable, IPlayerLifecy
                     - In case you are using Discord.Net, a common solution would be to enable RunMode.Async which dispatches commands on a separate task which allows
                       further gateway messages to be processed while the player is being created
                 - The client lost connection to the Lavalink server.
+                - You are missing the guild voice states intent which is required to retrieve the voice state of the bot (and possibly other users).
                 """);
         }
     }
