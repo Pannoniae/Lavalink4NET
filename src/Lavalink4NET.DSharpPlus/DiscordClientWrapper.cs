@@ -53,7 +53,7 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper, IDisposable
 
         discordClient.VoiceStateUpdated += OnVoiceStateUpdated;
         discordClient.VoiceServerUpdated += OnVoiceServerUpdated;
-        discordClient.Ready += OnClientReady;
+        discordClient.GuildDownloadCompleted += OnGuildDownloadCompleted;
     }
 
     /// <summary>
@@ -68,7 +68,7 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper, IDisposable
 
         shardedDiscordClient.VoiceStateUpdated += OnVoiceStateUpdated;
         shardedDiscordClient.VoiceServerUpdated += OnVoiceServerUpdated;
-        shardedDiscordClient.Ready += OnClientReady;
+        shardedDiscordClient.GuildDownloadCompleted += OnGuildDownloadCompleted;
     }
 
     /// <inheritdoc/>
@@ -169,13 +169,13 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper, IDisposable
         {
             discordClient.VoiceStateUpdated -= OnVoiceStateUpdated;
             discordClient.VoiceServerUpdated -= OnVoiceServerUpdated;
-            discordClient.Ready -= OnClientReady;
+            discordClient.GuildDownloadCompleted -= OnGuildDownloadCompleted;
         }
         else if (_client is DiscordShardedClient shardedClient)
         {
             shardedClient.VoiceStateUpdated -= OnVoiceStateUpdated;
             shardedClient.VoiceServerUpdated -= OnVoiceServerUpdated;
-            shardedClient.Ready -= OnClientReady;
+            shardedClient.GuildDownloadCompleted -= OnGuildDownloadCompleted;
         }
     }
 
@@ -183,7 +183,7 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper, IDisposable
         ? discordClient
         : ((DiscordShardedClient)_client).GetShard(guildId);
 
-    private Task OnClientReady(DiscordClient discordClient, ReadyEventArgs eventArgs)
+    private Task OnGuildDownloadCompleted(DiscordClient discordClient, GuildDownloadCompletedEventArgs eventArgs)
     {
         ArgumentNullException.ThrowIfNull(discordClient);
         ArgumentNullException.ThrowIfNull(eventArgs);
