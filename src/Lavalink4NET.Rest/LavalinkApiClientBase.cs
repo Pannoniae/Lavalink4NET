@@ -6,6 +6,8 @@ using Microsoft.Extensions.Options;
 
 public abstract class LavalinkApiClientBase
 {
+    private const string AllowedPassphraseCharacters = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.~!#$&'()*+,/:;=?@[]";
+
     private static int _insecurePassphraseNoticeSent;
 
     private readonly IOptions<LavalinkApiClientOptions> _options;
@@ -25,6 +27,11 @@ public abstract class LavalinkApiClientBase
             Interlocked.CompareExchange(ref _insecurePassphraseNoticeSent, 1, 0) is 0)
         {
             logger.LogWarning("The default Lavalink password is currently being used. It is highly recommended to change the password immediately to enhance the security of your system.");
+        }
+
+        if (options.Value.Passphrase.Any(x => !AllowedPassphraseCharacters.Contains(x)))
+        {
+            throw new ArgumentException($"The passphrase contains invalid characters. The following characters are allowed: '{AllowedPassphraseCharacters}'", nameof(options));
         }
 
         _options = options;
