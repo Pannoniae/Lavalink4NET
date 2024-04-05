@@ -14,7 +14,7 @@ public static partial class DSharpPlusUtilities
     // https://github.com/DSharpPlus/DSharpPlus/blob/master/DSharpPlus/Entities/Voice/DiscordVoiceState.cs#L95
     private static readonly PropertyInfo _sessionIdProperty = typeof(DiscordVoiceState)
 #pragma warning disable S3011 // Reflection should not be used to increase accessibility of classes, methods, or fields
-        .GetProperty("SessionId", BindingFlags.NonPublic | BindingFlags.Instance)!;
+        .GetProperty("SessionId", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)!;
 #pragma warning restore S3011 // Reflection should not be used to increase accessibility of classes, methods, or fields
 
     /// <summary>
