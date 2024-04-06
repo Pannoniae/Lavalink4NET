@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net.Http;
 using System.Net.WebSockets;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
@@ -199,7 +200,7 @@ internal sealed class LavalinkSocket : ILavalinkSocket
 
                 if (!receiveResult.EndOfMessage)
                 {
-                    ThrowIfNotEndOfMessage();
+                    ThrowIfNotEndOfMessage(Encoding.UTF8.GetString(receiveBuffer.Span[..receiveResult.Count]));
                 }
 
                 if (receiveResult.MessageType is not WebSocketMessageType.Text)
@@ -236,7 +237,7 @@ internal sealed class LavalinkSocket : ILavalinkSocket
         }
 
         [DoesNotReturn]
-        static void ThrowIfNotEndOfMessage() => throw new InvalidDataException("Received a partial payload.");
+        static void ThrowIfNotEndOfMessage(string content) => throw new InvalidDataException($"Received a partial payload: {content}.");
 
         [DoesNotReturn]
         static void ThrowIfInvalidMessageType() => throw new InvalidDataException("Received bad frame type.");
