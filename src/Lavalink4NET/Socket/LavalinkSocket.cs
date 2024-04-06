@@ -198,11 +198,6 @@ internal sealed class LavalinkSocket : ILavalinkSocket
                     .ReceiveAsync(receiveBuffer, cancellationToken)
                     .ConfigureAwait(false);
 
-                if (!receiveResult.EndOfMessage)
-                {
-                    ThrowIfNotEndOfMessage(Encoding.UTF8.GetString(receiveBuffer.Span[..receiveResult.Count]));
-                }
-
                 if (receiveResult.MessageType is not WebSocketMessageType.Text)
                 {
                     if (receiveResult.MessageType is WebSocketMessageType.Close)
@@ -211,6 +206,11 @@ internal sealed class LavalinkSocket : ILavalinkSocket
                     }
 
                     ThrowIfInvalidMessageType();
+                }
+
+                if (!receiveResult.EndOfMessage)
+                {
+                    ThrowIfNotEndOfMessage(Encoding.UTF8.GetString(receiveBuffer.Span[..receiveResult.Count]));
                 }
 
                 var buffer = receiveBuffer[..receiveResult.Count];
