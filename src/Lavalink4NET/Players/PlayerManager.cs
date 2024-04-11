@@ -397,6 +397,7 @@ internal sealed class PlayerManager : IPlayerManager, IDisposable, IPlayerLifecy
                       further gateway messages to be processed while the player is being created
                 - The client lost connection to the Lavalink server.
                 - You are missing the guild voice states intent which is required to retrieve the voice state of the bot (and possibly other users).
+                - Your bot does not have the necessary permissions to join the voice channel.
                 """);
         }
     }
