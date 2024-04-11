@@ -66,31 +66,43 @@ public sealed class PayloadJsonConverter : JsonConverter<IPayload>
 
         if (string.IsNullOrWhiteSpace(operationCode))
         {
-            ThrowInvalidOpCode();
+            ThrowMissingOpCode();
         }
 
-        var jsonTypeInfo = default(JsonTypeInfo?);
+        JsonTypeInfo? jsonTypeInfo;
+
         if (operationCode.Equals("event", StringComparison.OrdinalIgnoreCase))
         {
             var eventName = node["type"]?.GetValue<string>();
 
-            if (eventName is null || !_eventsMap.TryGetValue(eventName, out jsonTypeInfo))
+            if (string.IsNullOrWhiteSpace(eventName))
             {
-                ThrowInvalidEventName();
+                ThrowMissingEventName();
+            }
+
+            if (!_eventsMap.TryGetValue(eventName, out jsonTypeInfo))
+            {
+                ThrowInvalidEventName(eventName);
             }
         }
         else if (!_payloadsMap.TryGetValue(operationCode, out jsonTypeInfo))
         {
-            ThrowInvalidOpCode();
+            ThrowInvalidOpCode(operationCode);
         }
 
         return (IPayload?)node.Deserialize(jsonTypeInfo.Type, jsonTypeInfo.Options);
 
         [DoesNotReturn]
-        static void ThrowInvalidOpCode() => throw new JsonException("Missing or invalid 'op' (operation code) property in payload.");
+        static void ThrowInvalidOpCode(string operationCode) => throw new JsonException($"Invalid 'op' (operation code: '{operationCode}') property in payload.");
 
         [DoesNotReturn]
-        static void ThrowInvalidEventName() => throw new JsonException("Missing or invalid 'event' (event name) property in payload.");
+        static void ThrowInvalidEventName(string eventName) => throw new JsonException($"Invalid 'event' (event name: '{eventName}') property in payload.");
+
+        [DoesNotReturn]
+        static void ThrowMissingOpCode() => throw new JsonException($"Missing 'op' (operation code) property in payload.");
+
+        [DoesNotReturn]
+        static void ThrowMissingEventName() => throw new JsonException($"Missing 'event' (event name) property in payload.");
     }
 
     public override void Write(Utf8JsonWriter writer, IPayload value, JsonSerializerOptions options)
