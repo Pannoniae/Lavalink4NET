@@ -2,6 +2,7 @@ namespace Lavalink4NET.Players.Queued;
 
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Lavalink4NET.Extensions;
@@ -113,6 +114,22 @@ public class QueuedLavalinkPlayer : LavalinkPlayer, IQueuedLavalinkPlayer
         cancellationToken.ThrowIfCancellationRequested();
 
         return PlayAsync(new TrackQueueItem(trackReference), enqueue, properties, cancellationToken);
+    }
+
+    public ValueTask<int> PlayAsync(Uri uri, bool enqueue = true, TrackPlayProperties properties = default, CancellationToken cancellationToken = default)
+    {
+        EnsureNotDestroyed();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return PlayAsync(new TrackQueueItem(new TrackReference(uri.ToString())), enqueue, properties, cancellationToken);
+    }
+
+    public ValueTask<int> PlayFileAsync(FileInfo fileInfo, bool enqueue = true, TrackPlayProperties properties = default, CancellationToken cancellationToken = default)
+    {
+        EnsureNotDestroyed();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return PlayAsync(new TrackQueueItem(new TrackReference(fileInfo.FullName)), enqueue, properties, cancellationToken);
     }
 
     public override ValueTask PlayAsync(ITrackQueueItem trackQueueItem, TrackPlayProperties properties = default, CancellationToken cancellationToken = default)

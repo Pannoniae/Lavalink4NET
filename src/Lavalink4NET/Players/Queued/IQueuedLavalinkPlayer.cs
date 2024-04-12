@@ -1,5 +1,7 @@
 ﻿namespace Lavalink4NET.Players.Queued;
 
+using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Lavalink4NET.Players;
@@ -22,6 +24,10 @@ public interface IQueuedLavalinkPlayer : ILavalinkPlayer
     ValueTask<int> PlayAsync(LavalinkTrack track, bool enqueue = true, TrackPlayProperties properties = default, CancellationToken cancellationToken = default);
 
     ValueTask<int> PlayAsync(string identifier, bool enqueue = true, TrackPlayProperties properties = default, CancellationToken cancellationToken = default);
+
+    ValueTask<int> PlayAsync(Uri uri, bool enqueue = true, TrackPlayProperties properties = default, CancellationToken cancellationToken = default);
+
+    ValueTask<int> PlayFileAsync(FileInfo fileInfo, bool enqueue = true, TrackPlayProperties properties = default, CancellationToken cancellationToken = default);
 
     ValueTask<int> PlayAsync(TrackReference trackReference, bool enqueue = true, TrackPlayProperties properties = default, CancellationToken cancellationToken = default);
 

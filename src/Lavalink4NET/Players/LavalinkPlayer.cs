@@ -285,6 +285,22 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
         await PerformUpdateAsync(updateProperties, cancellationToken).ConfigureAwait(false);
     }
 
+    public ValueTask PlayAsync(Uri uri, TrackPlayProperties properties = default, CancellationToken cancellationToken = default)
+    {
+        EnsureNotDestroyed();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return PlayAsync(new TrackQueueItem(new TrackReference(uri.ToString())), properties, cancellationToken);
+    }
+
+    public ValueTask PlayFileAsync(FileInfo fileInfo, TrackPlayProperties properties = default, CancellationToken cancellationToken = default)
+    {
+        EnsureNotDestroyed();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return PlayAsync(new TrackQueueItem(new TrackReference(fileInfo.FullName)), properties, cancellationToken);
+    }
+
     public ValueTask PlayAsync(LavalinkTrack track, TrackPlayProperties properties = default, CancellationToken cancellationToken = default)
     {
         EnsureNotDestroyed();

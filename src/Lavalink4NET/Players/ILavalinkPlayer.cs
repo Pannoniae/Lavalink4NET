@@ -42,6 +42,10 @@ public interface ILavalinkPlayer : IAsyncDisposable
 
     ValueTask PlayAsync(string identifier, TrackPlayProperties properties = default, CancellationToken cancellationToken = default);
 
+    ValueTask PlayAsync(Uri uri, TrackPlayProperties properties = default, CancellationToken cancellationToken = default);
+
+    ValueTask PlayFileAsync(FileInfo fileInfo, TrackPlayProperties properties = default, CancellationToken cancellationToken = default);
+
     ValueTask RefreshAsync(CancellationToken cancellationToken = default);
 
     ValueTask ResumeAsync(CancellationToken cancellationToken = default);
