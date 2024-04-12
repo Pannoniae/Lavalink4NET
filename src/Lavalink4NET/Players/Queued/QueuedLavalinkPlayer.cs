@@ -310,9 +310,6 @@ public class QueuedLavalinkPlayer : LavalinkPlayer, IQueuedLavalinkPlayer
 
             if (Queue.HasHistory)
             {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"\n\nADDED FROM C: {peekedTrack.Track.Title}\n\n");
-                Console.ResetColor();
                 await Queue.History
                     .AddAsync(peekedTrack, cancellationToken)
                     .ConfigureAwait(false);
