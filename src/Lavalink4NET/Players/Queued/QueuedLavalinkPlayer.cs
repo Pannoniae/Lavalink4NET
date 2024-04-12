@@ -22,6 +22,7 @@ public class QueuedLavalinkPlayer : LavalinkPlayer, IQueuedLavalinkPlayer
     private readonly bool _resetShuffleOnStop;
     private readonly bool _respectTrackRepeatOnSkip;
     private readonly TrackRepeatMode _defaultTrackRepeatMode;
+    private readonly TrackHistoryBehavior _trackHistoryBehavior;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="QueuedLavalinkPlayer"/> class.
@@ -41,6 +42,7 @@ public class QueuedLavalinkPlayer : LavalinkPlayer, IQueuedLavalinkPlayer
         _resetShuffleOnStop = options.ResetShuffleOnStop;
         _defaultTrackRepeatMode = options.DefaultTrackRepeatMode;
         _clearHistoryOnStop = options.ClearHistoryOnStop;
+        _trackHistoryBehavior = options.HistoryBehavior;
 
         AutoPlay = options.EnableAutoPlay;
         RepeatMode = _defaultTrackRepeatMode;
@@ -208,14 +210,6 @@ public class QueuedLavalinkPlayer : LavalinkPlayer, IQueuedLavalinkPlayer
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentNullException.ThrowIfNull(queueItem);
 
-        // Add track to history
-        if (Queue.HasHistory && endReason is not TrackEndReason.Replaced)
-        {
-            await Queue.History
-                .AddAsync(queueItem, cancellationToken)
-                .ConfigureAwait(false);
-        }
-
         await base
             .NotifyTrackEndedAsync(queueItem, endReason, cancellationToken)
             .ConfigureAwait(false);
@@ -237,25 +231,21 @@ public class QueuedLavalinkPlayer : LavalinkPlayer, IQueuedLavalinkPlayer
 
         var currentItem = CurrentItem;
 
-        if (currentItem is not null)
+        var respectHistory = _trackHistoryBehavior switch
         {
-            if (RepeatMode is TrackRepeatMode.Queue)
-            {
-                await Queue
-                    .AddAsync(currentItem, cancellationToken)
-                    .ConfigureAwait(false);
-            }
+            TrackHistoryBehavior.Adaptive => RepeatMode is TrackRepeatMode.None || (RepeatMode is TrackRepeatMode.Queue && !Queue.IsEmpty),
+            TrackHistoryBehavior.Filtered => RepeatMode is not TrackRepeatMode.Track,
+            _ => true,
+        };
 
-            // "!Queue.IsEmpty" prevents adding the same track to the history twice since it will be also added in NotifyTrackEndedAsync
-            if (Queue.HasHistory && !Queue.IsEmpty)
-            {
-                await Queue.History
-                    .AddAsync(currentItem, cancellationToken)
-                    .ConfigureAwait(false);
-            }
+        if (currentItem is not null && RepeatMode is TrackRepeatMode.Queue)
+        {
+            await Queue
+                .AddAsync(currentItem, cancellationToken)
+                .ConfigureAwait(false);
         }
 
-        var track = await GetNextTrackAsync(skipCount, respectTrackRepeat, cancellationToken).ConfigureAwait(false);
+        var track = await GetNextTrackAsync(skipCount, respectTrackRepeat, respectHistory, cancellationToken).ConfigureAwait(false);
 
         if (!track.IsPresent)
         {
@@ -271,15 +261,29 @@ public class QueuedLavalinkPlayer : LavalinkPlayer, IQueuedLavalinkPlayer
             .ConfigureAwait(false);
     }
 
-    private async ValueTask<Optional<ITrackQueueItem>> GetNextTrackAsync(int count = 1, bool respectTrackRepeat = false, CancellationToken cancellationToken = default)
+    private async ValueTask<Optional<ITrackQueueItem>> GetNextTrackAsync(
+        int count = 1,
+        bool respectTrackRepeat = false,
+        bool respectHistory = false,
+        CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         var track = default(Optional<ITrackQueueItem>);
 
-        if (respectTrackRepeat && RepeatMode is TrackRepeatMode.Track && CurrentItem is not null)
+        if (CurrentItem is not null)
         {
-            return new Optional<ITrackQueueItem>(CurrentItem);
+            if (Queue.HasHistory && respectHistory)
+            {
+                await Queue.History
+                    .AddAsync(CurrentItem, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            if (respectTrackRepeat && RepeatMode is TrackRepeatMode.Track)
+            {
+                return new Optional<ITrackQueueItem>(CurrentItem);
+            }
         }
 
         var dequeueMode = Shuffle
@@ -306,6 +310,9 @@ public class QueuedLavalinkPlayer : LavalinkPlayer, IQueuedLavalinkPlayer
 
             if (Queue.HasHistory)
             {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"\n\nADDED FROM C: {peekedTrack.Track.Title}\n\n");
+                Console.ResetColor();
                 await Queue.History
                     .AddAsync(peekedTrack, cancellationToken)
                     .ConfigureAwait(false);
