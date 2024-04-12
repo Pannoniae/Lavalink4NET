@@ -207,6 +207,8 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper, IDisposable
 
         var requestOptions = new RequestOptions { CancelToken = cancellationToken, };
 
+        // WARNING! The parameters "self mute" and "self deaf" are accidentally swapped in the method signature of the SendVoiceStateUpdateAsync method.
+        // This should be fixed when migrating to a non-reflection based approach which should enforce a major version bump to not break existing bots.
         var arguments = new object?[]
         {
             guildId, // Guild Id
