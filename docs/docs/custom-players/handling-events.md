@@ -17,15 +17,15 @@ public sealed class CustomPlayer : QueuedLavalinkPlayer
         _textChannel = properties.Options.Value.TextChannel;
     }
 
-    protected override async ValueTask OnTrackStartedAsync(LavalinkTrack track, CancellationToken cancellationToken = default)
+    protected override async ValueTask NotifyTrackStartedAsync(ITrackQueueItem track, CancellationToken cancellationToken = default)
     {
         await base
-            .OnTrackStartedAsync(track, cancellationToken)
+            .NotifyTrackStartedAsync(track, cancellationToken)
             .ConfigureAwait(false);
 
         // send a message to the text channel
         await _textChannel
-            .SendMessageAsync($"Now playing: {track.Title}")
+            .SendMessageAsync($"Now playing: {track.Track.Title}")
             .ConfigureAwait(false);
     }
 }
