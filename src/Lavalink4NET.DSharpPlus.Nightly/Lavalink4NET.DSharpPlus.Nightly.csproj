@@ -11,7 +11,7 @@
     <PackAsTool>False</PackAsTool>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="DSharpPlus" Version="5.0.0-nightly-02304" />
+    <PackageReference Include="DSharpPlus" Version="5.0.0-nightly-02306" />
     <ProjectReference Include="../Lavalink4NET/Lavalink4NET.csproj" />
   </ItemGroup>
   <Import Project="../Lavalink4NET.targets" />

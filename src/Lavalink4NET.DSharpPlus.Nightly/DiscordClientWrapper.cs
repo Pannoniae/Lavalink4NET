@@ -27,12 +27,17 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
     /// <inheritdoc/>
     public event AsyncEventHandler<L4N.VoiceStateUpdatedEventArgs>? VoiceStateUpdated;
 
-    private readonly object _client; // either DiscordShardedClient or DiscordClient
+    private readonly DiscordClient _client; // either DiscordShardedClient or DiscordClient
     private readonly ILogger<DiscordClientWrapper> _logger;
     private readonly TaskCompletionSource<ClientInformation> _readyTaskCompletionSource;
     private bool _disposed;
 
-    private DiscordClientWrapper(object discordClient, ILogger<DiscordClientWrapper> logger)
+    /// <summary>
+    /// Creates a new instance of <see cref="DiscordClientWrapper"/>.
+    /// </summary>
+    /// <param name="discordClient">The Discord Client to wrap.</param>
+    /// <param name="logger">a logger associated with this wrapper.</param>
+    public DiscordClientWrapper(DiscordClient discordClient, ILogger<DiscordClientWrapper> logger)
     {
         ArgumentNullException.ThrowIfNull(discordClient);
         ArgumentNullException.ThrowIfNull(logger);
@@ -41,17 +46,6 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
         _logger = logger;
 
         _readyTaskCompletionSource = new TaskCompletionSource<ClientInformation>(TaskCreationOptions.RunContinuationsAsynchronously);
-    }
-
-    /// <summary>
-    /// Creates a new instance of <see cref="DiscordClientWrapper"/>.
-    /// </summary>
-    /// <param name="discordClient">The Discord Client to wrap.</param>
-    /// <param name="logger">a logger associated with this wrapper.</param>
-    public DiscordClientWrapper(DiscordClient discordClient, ILogger<DiscordClientWrapper> logger)
-        : this((object)discordClient, logger)
-    {
-        ArgumentNullException.ThrowIfNull(discordClient);
 
         void AddEventHandler(Type eventArgsType, Delegate eventHandler)
         {
@@ -73,21 +67,6 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
         AddEventHandler(typeof(GuildDownloadCompletedEventArgs), new AsyncEventHandler<DiscordClient, GuildDownloadCompletedEventArgs>(OnGuildDownloadCompleted));
     }
 
-    /// <summary>
-    /// Creates a new instance of <see cref="DiscordClientWrapper"/>.
-    /// </summary>
-    /// <param name="shardedDiscordClient">The Sharded Discord Client to wrap.</param>
-    /// <param name="logger">a logger associated with this wrapper.</param>
-    public DiscordClientWrapper(DiscordShardedClient shardedDiscordClient, ILogger<DiscordClientWrapper> logger)
-        : this((object)shardedDiscordClient, logger)
-    {
-        ArgumentNullException.ThrowIfNull(shardedDiscordClient);
-
-        shardedDiscordClient.VoiceStateUpdated += OnVoiceStateUpdated;
-        shardedDiscordClient.VoiceServerUpdated += OnVoiceServerUpdated;
-        shardedDiscordClient.GuildDownloadCompleted += OnGuildDownloadCompleted;
-    }
-
     /// <inheritdoc/>
     /// <exception cref="ObjectDisposedException">thrown if the instance is disposed</exception>
     public async ValueTask<ImmutableArray<ulong>> GetChannelUsersAsync(
@@ -101,7 +80,7 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
         DiscordChannel channel;
         try
         {
-            channel = await GetClientForGuild(guildId)
+            channel = await _client
                 .GetChannelAsync(voiceChannelId)
                 .ConfigureAwait(false);
 
@@ -145,8 +124,6 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var client = GetClientForGuild(guildId);
-
         var payload = new VoiceStateUpdatePayload
         {
             GuildId = guildId,
@@ -155,13 +132,17 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
             IsSelfDeafened = selfDeaf,
         };
 
+#pragma warning disable DSP0004 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 #pragma warning disable CS0618 // This method should not be used unless you know what you're doing. Instead, look towards the other explicitly implemented methods which come with client-side validation.
+
         // Jan 23, 2024, OoLunar: We're telling Discord that we're joining a voice channel.
         // At the time of writing, both DSharpPlus.VoiceNext and DSharpPlus.VoiceLink™
         // use this method to send voice state updates.
-        await client
-            .SendPayloadAsync(GatewayOpCode.VoiceStateUpdate, payload)
+        await _client
+            .SendPayloadAsync(GatewayOpCode.VoiceStateUpdate, payload, guildId)
             .ConfigureAwait(false);
+
+#pragma warning restore DSP0004 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 #pragma warning restore CS0618 // This method should not be used unless you know what you're doing. Instead, look towards the other explicitly implemented methods which come with client-side validation.
     }
 
@@ -172,11 +153,7 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
         return new(_readyTaskCompletionSource.Task.WaitAsync(cancellationToken));
     }
 
-    private DiscordClient GetClientForGuild(ulong guildId) => _client is DiscordClient discordClient
-        ? discordClient
-        : ((DiscordShardedClient)_client).GetShard(guildId);
-
-    private Task OnGuildDownloadCompleted(DiscordClient discordClient, GuildDownloadCompletedEventArgs eventArgs)
+    private async Task OnGuildDownloadCompleted(DiscordClient discordClient, GuildDownloadCompletedEventArgs eventArgs)
     {
         ArgumentNullException.ThrowIfNull(discordClient);
         ArgumentNullException.ThrowIfNull(eventArgs);
@@ -184,10 +161,9 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
         var clientInformation = new ClientInformation(
             Label: "DSharpPlus",
             CurrentUserId: discordClient.CurrentUser.Id,
-            ShardCount: discordClient.ShardCount);
+            ShardCount: (await discordClient.GetGatewayInfoAsync()).ShardCount);
 
         _readyTaskCompletionSource.TrySetResult(clientInformation);
-        return Task.CompletedTask;
     }
 
     private async Task OnVoiceServerUpdated(DiscordClient discordClient, VoiceServerUpdatedEventArgs voiceServerUpdateEventArgs)
