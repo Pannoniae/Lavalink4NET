@@ -17,7 +17,7 @@ using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
 /// <summary>
-/// Wraps a <see cref="DiscordClient"/> or <see cref="DiscordShardedClient"/> instance.
+/// Wraps a <see cref="DiscordClient"/> instance.
 /// </summary>
 public sealed class DiscordClientWrapper : IDiscordClientWrapper
 {
@@ -27,7 +27,7 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
     /// <inheritdoc/>
     public event AsyncEventHandler<L4N.VoiceStateUpdatedEventArgs>? VoiceStateUpdated;
 
-    private readonly DiscordClient _client; // either DiscordShardedClient or DiscordClient
+    private readonly DiscordClient _client; // sharded clients are now also managed by the same DiscordClient type
     private readonly ILogger<DiscordClientWrapper> _logger;
     private readonly TaskCompletionSource<ClientInformation> _readyTaskCompletionSource;
     private bool _disposed;
