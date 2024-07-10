@@ -30,7 +30,6 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
     private readonly DiscordClient _client; // sharded clients are now also managed by the same DiscordClient type
     private readonly ILogger<DiscordClientWrapper> _logger;
     private readonly TaskCompletionSource<ClientInformation> _readyTaskCompletionSource;
-    private bool _disposed;
 
     /// <summary>
     /// Creates a new instance of <see cref="DiscordClientWrapper"/>.
