@@ -15,8 +15,8 @@ public static partial class DSharpPlusUtilities
     ///     The internal "events" property info in <see cref="DiscordClient"/>.
     /// </summary>
     // https://github.com/DSharpPlus/DSharpPlus/blob/master/DSharpPlus/Clients/DiscordClient.cs#L37
-    private static readonly PropertyInfo eventsProperty =
-        typeof(DiscordClient).GetProperty("events", BindingFlags.NonPublic | BindingFlags.Instance)!;
+    private static readonly FieldInfo eventsField =
+        typeof(DiscordClient).GetField("events", BindingFlags.NonPublic | BindingFlags.Instance)!;
 
     /// <summary>
     ///     Gets the internal "events" property value of the specified <paramref name="client"/>.
@@ -24,14 +24,14 @@ public static partial class DSharpPlusUtilities
     /// <param name="client">the instance</param>
     /// <returns>the "events" value</returns>
     public static ConcurrentDictionary<Type, AsyncEvent> GetEvents(this DiscordClient client)
-        => (ConcurrentDictionary<Type, AsyncEvent>)eventsProperty.GetValue(client)!;
+        => (ConcurrentDictionary<Type, AsyncEvent>)eventsField.GetValue(client)!;
 
     /// <summary>
     ///     The internal "errorHandler" property info in <see cref="DiscordClient"/>.
     /// </summary>
     // https://github.com/DSharpPlus/DSharpPlus/blob/master/DSharpPlus/Clients/DiscordClient.cs#L41
-    private static readonly PropertyInfo errorHandlerProperty =
-        typeof(DiscordClient).GetProperty("errorHandler", BindingFlags.NonPublic | BindingFlags.Instance)!;
+    private static readonly FieldInfo errorHandlerField =
+        typeof(DiscordClient).GetField("errorHandler", BindingFlags.NonPublic | BindingFlags.Instance)!;
 
     /// <summary>
     ///     Gets the internal "errorHandler" property value of the specified <paramref name="client"/>.
@@ -39,7 +39,7 @@ public static partial class DSharpPlusUtilities
     /// <param name="client">the instance</param>
     /// <returns>the "errorHandler" value</returns>
     public static IClientErrorHandler GetErrorHandler(this DiscordClient client)
-        => (IClientErrorHandler)errorHandlerProperty.GetValue(client)!;
+        => (IClientErrorHandler)errorHandlerField.GetValue(client)!;
 
     /// <summary>
     ///     The internal "Register" method info in <see cref="DiscordClient"/>.

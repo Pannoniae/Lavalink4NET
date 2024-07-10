@@ -68,9 +68,9 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
             asyncEvent.Register(eventHandler);
         }
 
-        AddEventHandler(typeof(VoiceStateUpdatedEventArgs), OnVoiceStateUpdated);
-        AddEventHandler(typeof(VoiceServerUpdatedEventArgs), OnVoiceServerUpdated);
-        AddEventHandler(typeof(GuildDownloadCompletedEventArgs), OnGuildDownloadCompleted);
+        AddEventHandler(typeof(VoiceStateUpdatedEventArgs), new AsyncEventHandler<DiscordClient, VoiceStateUpdatedEventArgs>(OnVoiceStateUpdated));
+        AddEventHandler(typeof(VoiceServerUpdatedEventArgs), new AsyncEventHandler<DiscordClient, VoiceServerUpdatedEventArgs>(OnVoiceServerUpdated));
+        AddEventHandler(typeof(GuildDownloadCompletedEventArgs), new AsyncEventHandler<DiscordClient, GuildDownloadCompletedEventArgs>(OnGuildDownloadCompleted));
     }
 
     /// <summary>
