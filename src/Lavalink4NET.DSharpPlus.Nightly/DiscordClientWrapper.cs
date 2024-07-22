@@ -160,7 +160,7 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
         var clientInformation = new ClientInformation(
             Label: "DSharpPlus",
             CurrentUserId: discordClient.CurrentUser.Id,
-            ShardCount: (await discordClient.GetGatewayInfoAsync()).ShardCount);
+            ShardCount: await discordClient.GetShardCountAsync());
 
         _readyTaskCompletionSource.TrySetResult(clientInformation);
     }
