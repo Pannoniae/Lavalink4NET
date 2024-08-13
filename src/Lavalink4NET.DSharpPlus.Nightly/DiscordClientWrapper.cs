@@ -32,12 +32,6 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
     private readonly TaskCompletionSource<ClientInformation> _readyTaskCompletionSource;
 
     /// <summary>
-    /// Re-assign this delegate in the client configuration to change the way the connected shard count is retrived.<br/>
-    /// You will only need to do this if you are using a custom IShardOrchestrator for your client.
-    /// </summary>
-    public Func<Task<int>> GetShardCount { get; set; }
-
-    /// <summary>
     /// Creates a new instance of <see cref="DiscordClientWrapper"/>.
     /// </summary>
     /// <param name="discordClient">The Discord Client to wrap.</param>
@@ -50,25 +44,6 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
         _client = discordClient;
         _logger = logger;
         _readyTaskCompletionSource = new TaskCompletionSource<ClientInformation>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        FieldInfo orchestratorField = typeof(DiscordClient).GetField("orchestrator", BindingFlags.NonPublic | BindingFlags.Instance)!;
-        var orchestrator = (IShardOrchestrator)orchestratorField.GetValue(discordClient)!;
-
-        if (orchestrator is SingleShardOrchestrator)
-            GetShardCount = () => Task.FromResult(1);
-
-        else if (orchestrator is MultiShardOrchestrator multiShardOrchestrator)
-        {
-            FieldInfo shardCountField = typeof(MultiShardOrchestrator).GetField("shardCount", BindingFlags.NonPublic | BindingFlags.Instance)!;
-            GetShardCount = () => Task.Run(() => (int)(uint)shardCountField.GetValue(multiShardOrchestrator)!);
-        }
-
-        else
-        {
-            GetShardCount = () => Task.Run(async () => (await discordClient.GetGatewayInfoAsync()).ShardCount);
-            _logger.LogInformation("The DiscordClient is configured to use a non-default Shard Orchestrator - " +
-                "make sure that this wrapper's GetShardCount property is configured to properly retrieve the shard count");
-        }
     }
 
     /// <inheritdoc/>
@@ -158,7 +133,7 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
         return new(_readyTaskCompletionSource.Task.WaitAsync(cancellationToken));
     }
 
-    internal async Task OnGuildDownloadCompleted(DiscordClient discordClient, GuildDownloadCompletedEventArgs eventArgs) 
+    internal Task OnGuildDownloadCompleted(DiscordClient discordClient, GuildDownloadCompletedEventArgs eventArgs) 
     {
         ArgumentNullException.ThrowIfNull(discordClient);
         ArgumentNullException.ThrowIfNull(eventArgs);
@@ -166,9 +141,10 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
         var clientInformation = new ClientInformation(
             Label: "DSharpPlus",
             CurrentUserId: discordClient.CurrentUser.Id,
-            ShardCount: await GetShardCount());
+            ShardCount: discordClient.GetConnectedShardCount());
 
         _readyTaskCompletionSource.TrySetResult(clientInformation);
+        return Task.CompletedTask;
     }
 
     internal async Task OnVoiceServerUpdated(DiscordClient discordClient, VoiceServerUpdatedEventArgs voiceServerUpdateEventArgs)
