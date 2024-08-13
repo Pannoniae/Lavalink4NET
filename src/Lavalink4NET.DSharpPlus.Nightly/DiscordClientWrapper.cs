@@ -14,7 +14,6 @@ using Lavalink4NET.Clients;
 using Lavalink4NET = Clients.Events;
 using Lavalink4NET.Events;
 using Microsoft.Extensions.Logging;
-using System.Reflection;
 
 /// <summary>
 /// Wraps a <see cref="DiscordClient"/> instance.
@@ -28,6 +27,7 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
     public event AsyncEventHandler<Lavalink4NET.VoiceStateUpdatedEventArgs>? VoiceStateUpdated;
 
     private readonly DiscordClient _client;
+    private readonly IShardOrchestrator _shardOrchestrator;
     private readonly ILogger<DiscordClientWrapper> _logger;
     private readonly TaskCompletionSource<ClientInformation> _readyTaskCompletionSource;
 
@@ -35,13 +35,16 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
     /// Creates a new instance of <see cref="DiscordClientWrapper"/>.
     /// </summary>
     /// <param name="discordClient">The Discord Client to wrap.</param>
-    /// <param name="logger">a logger associated with this wrapper.</param>
-    public DiscordClientWrapper(DiscordClient discordClient, ILogger<DiscordClientWrapper> logger)
+    /// <param name="shardOrchestrator">The Discord shard orchestrator associated with this client.</param>
+    /// <param name="logger">A logger associated with this wrapper.</param>
+    public DiscordClientWrapper(DiscordClient discordClient, IShardOrchestrator shardOrchestrator, ILogger<DiscordClientWrapper> logger)
     {
         ArgumentNullException.ThrowIfNull(discordClient);
+        ArgumentNullException.ThrowIfNull(shardOrchestrator);
         ArgumentNullException.ThrowIfNull(logger);
 
         _client = discordClient;
+        _shardOrchestrator = shardOrchestrator;
         _logger = logger;
         _readyTaskCompletionSource = new TaskCompletionSource<ClientInformation>(TaskCreationOptions.RunContinuationsAsynchronously);
     }
@@ -141,7 +144,7 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
         var clientInformation = new ClientInformation(
             Label: "DSharpPlus",
             CurrentUserId: discordClient.CurrentUser.Id,
-            ShardCount: discordClient.GetConnectedShardCount());
+            ShardCount: _shardOrchestrator.ConnectedShardCount);
 
         _readyTaskCompletionSource.TrySetResult(clientInformation);
         return Task.CompletedTask;
