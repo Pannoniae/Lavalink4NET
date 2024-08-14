@@ -217,6 +217,10 @@ internal sealed class LavalinkSocket : ILavalinkSocket
                 await ProcessAsync(buffer, cancellationToken).ConfigureAwait(false);
             }
         }
+        catch (OperationCanceledException)
+        {
+            // Ignore
+        }
         catch (Exception exception)
         {
             _logger.CommunicationError(Label, exception);
