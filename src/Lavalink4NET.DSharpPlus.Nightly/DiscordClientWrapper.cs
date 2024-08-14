@@ -5,16 +5,15 @@ using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
 using global::DSharpPlus;
-using global::DSharpPlus.AsyncEvents;
+using global::DSharpPlus.Clients;
 using global::DSharpPlus.Entities;
 using global::DSharpPlus.EventArgs;
 using global::DSharpPlus.Exceptions;
 using global::DSharpPlus.Net.Abstractions;
 using Lavalink4NET.Clients;
-using L4N = Clients.Events;
+using Lavalink4NET = Clients.Events;
 using Lavalink4NET.Events;
 using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
 
 /// <summary>
 /// Wraps a <see cref="DiscordClient"/> instance.
@@ -22,12 +21,13 @@ using System.Collections.Concurrent;
 public sealed class DiscordClientWrapper : IDiscordClientWrapper
 {
     /// <inheritdoc/>
-    public event AsyncEventHandler<L4N.VoiceServerUpdatedEventArgs>? VoiceServerUpdated;
+    public event AsyncEventHandler<Lavalink4NET.VoiceServerUpdatedEventArgs>? VoiceServerUpdated;
 
     /// <inheritdoc/>
-    public event AsyncEventHandler<L4N.VoiceStateUpdatedEventArgs>? VoiceStateUpdated;
+    public event AsyncEventHandler<Lavalink4NET.VoiceStateUpdatedEventArgs>? VoiceStateUpdated;
 
-    private readonly DiscordClient _client; // sharded clients are now also managed by the same DiscordClient type
+    private readonly DiscordClient _client;
+    private readonly IShardOrchestrator _shardOrchestrator;
     private readonly ILogger<DiscordClientWrapper> _logger;
     private readonly TaskCompletionSource<ClientInformation> _readyTaskCompletionSource;
 
@@ -35,35 +35,18 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
     /// Creates a new instance of <see cref="DiscordClientWrapper"/>.
     /// </summary>
     /// <param name="discordClient">The Discord Client to wrap.</param>
-    /// <param name="logger">a logger associated with this wrapper.</param>
-    public DiscordClientWrapper(DiscordClient discordClient, ILogger<DiscordClientWrapper> logger)
+    /// <param name="shardOrchestrator">The Discord shard orchestrator associated with this client.</param>
+    /// <param name="logger">A logger associated with this wrapper.</param>
+    public DiscordClientWrapper(DiscordClient discordClient, IShardOrchestrator shardOrchestrator, ILogger<DiscordClientWrapper> logger)
     {
         ArgumentNullException.ThrowIfNull(discordClient);
+        ArgumentNullException.ThrowIfNull(shardOrchestrator);
         ArgumentNullException.ThrowIfNull(logger);
 
         _client = discordClient;
+        _shardOrchestrator = shardOrchestrator;
         _logger = logger;
-
         _readyTaskCompletionSource = new TaskCompletionSource<ClientInformation>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        void AddEventHandler(Type eventArgsType, Delegate eventHandler)
-        {
-            IClientErrorHandler errorHandler = discordClient.GetErrorHandler();
-            ConcurrentDictionary<Type, AsyncEvent> events = discordClient.GetEvents();
-
-            Type asyncEventType = typeof(AsyncEvent<,>).MakeGenericType(discordClient.GetType(), eventArgsType);
-            AsyncEvent asyncEvent = events.GetOrAdd(eventArgsType, _ => (AsyncEvent)Activator.CreateInstance
-            (
-                type: asyncEventType,
-                args: [errorHandler]
-            )!);
-
-            asyncEvent.Register(eventHandler);
-        }
-
-        AddEventHandler(typeof(VoiceStateUpdatedEventArgs), new AsyncEventHandler<DiscordClient, VoiceStateUpdatedEventArgs>(OnVoiceStateUpdated));
-        AddEventHandler(typeof(VoiceServerUpdatedEventArgs), new AsyncEventHandler<DiscordClient, VoiceServerUpdatedEventArgs>(OnVoiceServerUpdated));
-        AddEventHandler(typeof(GuildDownloadCompletedEventArgs), new AsyncEventHandler<DiscordClient, GuildDownloadCompletedEventArgs>(OnGuildDownloadCompleted));
     }
 
     /// <inheritdoc/>
@@ -88,6 +71,7 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
                 return ImmutableArray<ulong>.Empty;
             }
         }
+
         catch (DiscordException exception)
         {
             _logger.LogWarning(
@@ -152,7 +136,7 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
         return new(_readyTaskCompletionSource.Task.WaitAsync(cancellationToken));
     }
 
-    private async Task OnGuildDownloadCompleted(DiscordClient discordClient, GuildDownloadCompletedEventArgs eventArgs)
+    internal Task OnGuildDownloadCompleted(DiscordClient discordClient, GuildDownloadCompletedEventArgs eventArgs) 
     {
         ArgumentNullException.ThrowIfNull(discordClient);
         ArgumentNullException.ThrowIfNull(eventArgs);
@@ -160,12 +144,13 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
         var clientInformation = new ClientInformation(
             Label: "DSharpPlus",
             CurrentUserId: discordClient.CurrentUser.Id,
-            ShardCount: await discordClient.GetShardCountAsync());
+            ShardCount: _shardOrchestrator.ConnectedShardCount);
 
         _readyTaskCompletionSource.TrySetResult(clientInformation);
+        return Task.CompletedTask;
     }
 
-    private async Task OnVoiceServerUpdated(DiscordClient discordClient, VoiceServerUpdatedEventArgs voiceServerUpdateEventArgs)
+    internal async Task OnVoiceServerUpdated(DiscordClient discordClient, VoiceServerUpdatedEventArgs voiceServerUpdateEventArgs)
     {
         ArgumentNullException.ThrowIfNull(discordClient);
         ArgumentNullException.ThrowIfNull(voiceServerUpdateEventArgs);
@@ -174,7 +159,7 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
             Token: voiceServerUpdateEventArgs.VoiceToken,
             Endpoint: voiceServerUpdateEventArgs.Endpoint);
 
-        var eventArgs = new L4N.VoiceServerUpdatedEventArgs(
+        var eventArgs = new Lavalink4NET.VoiceServerUpdatedEventArgs(
             guildId: voiceServerUpdateEventArgs.Guild.Id,
             voiceServer: server);
 
@@ -183,7 +168,7 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
             .ConfigureAwait(false);
     }
 
-    private async Task OnVoiceStateUpdated(DiscordClient discordClient, VoiceStateUpdatedEventArgs voiceStateUpdateEventArgs)
+    internal async Task OnVoiceStateUpdated(DiscordClient discordClient, VoiceStateUpdatedEventArgs voiceStateUpdateEventArgs)
     {
         ArgumentNullException.ThrowIfNull(discordClient);
         ArgumentNullException.ThrowIfNull(voiceStateUpdateEventArgs);
@@ -202,7 +187,7 @@ public sealed class DiscordClientWrapper : IDiscordClientWrapper
             SessionId: sessionId);
 
         // invoke event
-        var eventArgs = new L4N.VoiceStateUpdatedEventArgs(
+        var eventArgs = new Lavalink4NET.VoiceStateUpdatedEventArgs(
             guildId: voiceStateUpdateEventArgs.Guild.Id,
             userId: voiceStateUpdateEventArgs.User.Id,
             isCurrentUser: voiceStateUpdateEventArgs.User.Id == discordClient.CurrentUser.Id,
