@@ -39,6 +39,7 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
     private volatile ITrackQueueItem? _currentItem;
     private volatile ITrackQueueItem? _replacedItem;
     private volatile ITrackQueueItem? _nextItem;
+    private volatile string? _nextOverridenPlayableItemIdentifier;
     private UpDownCounter<int>? _previousStateCounter;
     private string? _previousVoiceServer;
 
@@ -218,9 +219,10 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
         ArgumentNullException.ThrowIfNull(track);
 
         var nextTrack = Interlocked.Exchange(ref _nextItem, null) ?? CurrentItem;
-        Debug.Assert(track.Identifier == nextTrack?.Identifier);
+        var nextTrackIdentifier = Interlocked.Exchange(ref _nextOverridenPlayableItemIdentifier, null) ?? nextTrack?.Identifier;
+        Debug.Assert(track.Identifier == nextTrackIdentifier);
 
-        CurrentItem = track.Identifier == nextTrack?.Identifier
+        CurrentItem = track.Identifier == nextTrackIdentifier
             ? nextTrack
             : new TrackQueueItem(new TrackReference(track));
 
@@ -265,7 +267,7 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
                 .GetPlayableTrackAsync(cancellationToken)
                 .ConfigureAwait(false);
 
-            updateProperties.TrackData = playableTrack.ToString();
+            updateProperties.TrackData = _nextOverridenPlayableItemIdentifier = playableTrack.ToString();
         }
         else
         {
