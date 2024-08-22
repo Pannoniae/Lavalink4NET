@@ -267,7 +267,8 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
                 .GetPlayableTrackAsync(cancellationToken)
                 .ConfigureAwait(false);
 
-            updateProperties.TrackData = _nextOverridenPlayableItemIdentifier = playableTrack.ToString();
+            _nextOverridenPlayableItemIdentifier = playableTrack.Identifier;
+            updateProperties.TrackData = playableTrack.ToString();
         }
         else
         {
