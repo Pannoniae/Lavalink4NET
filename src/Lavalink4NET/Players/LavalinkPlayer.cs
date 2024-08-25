@@ -37,6 +37,7 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
     private ulong _trackVersion;
     private volatile ITrackQueueItem? _stoppedItem;
     private volatile ITrackQueueItem? _currentItem;
+    private volatile string? _currentOverridenPlayableItemIdentifier;
     private volatile ITrackQueueItem? _replacedItem;
     private volatile ITrackQueueItem? _nextItem;
     private volatile string? _nextOverridenPlayableItemIdentifier;
@@ -222,6 +223,7 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
         var nextTrackIdentifier = Interlocked.Exchange(ref _nextOverridenPlayableItemIdentifier, null) ?? nextTrack?.Identifier;
         Debug.Assert(track.Identifier == nextTrackIdentifier);
 
+        _currentOverridenPlayableItemIdentifier = nextTrackIdentifier;
         CurrentItem = track.Identifier == nextTrackIdentifier
             ? nextTrack
             : new TrackQueueItem(new TrackReference(track));
@@ -272,6 +274,7 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
         }
         else
         {
+            _nextOverridenPlayableItemIdentifier = null;
             updateProperties.Identifier = trackQueueItem.Reference.Identifier;
         }
 
@@ -476,18 +479,29 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
 
         if (currentTrack is null && model.CurrentTrack is null)
         {
+            _currentOverridenPlayableItemIdentifier = null;
             CurrentItem = null;
         }
-        else if (model.CurrentTrack?.Information.Identifier != currentTrack?.Identifier)
+        else if (model.CurrentTrack?.Information.Identifier != currentTrack?.Identifier
+                 && model.CurrentTrack?.Information.Identifier != _currentOverridenPlayableItemIdentifier
+                 && model.CurrentTrack?.Information.Identifier != _nextOverridenPlayableItemIdentifier)
         {
             // This indicates that the track had been restored from API information
-            Debug.Assert(_nextItem is not null || model.CurrentTrack?.Information.Identifier == currentTrack?.Identifier);
+            Debug.Assert(_nextItem is not null
+                         || (model.CurrentTrack?.Information.Identifier == currentTrack?.Identifier
+                             && model.CurrentTrack?.Information.Identifier != _currentOverridenPlayableItemIdentifier
+                             && model.CurrentTrack?.Information.Identifier != _nextOverridenPlayableItemIdentifier));
 
-            var track = model.CurrentTrack is null
-                ? _nextItem
-                : new TrackQueueItem(new TrackReference(LavalinkApiClient.CreateTrack(model.CurrentTrack)));
-
-            CurrentItem = track;
+            if (model.CurrentTrack is null)
+            {
+                CurrentItem = _nextItem;
+            }
+            else
+            {
+                var track = LavalinkApiClient.CreateTrack(model.CurrentTrack);
+                CurrentItem = LookupTrackQueueItem(track, CurrentItem, _currentOverridenPlayableItemIdentifier) ??
+                              new TrackQueueItem(track);
+            }
 
             Interlocked.Increment(ref _trackVersion);
         }
@@ -495,6 +509,12 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
         Volume = model.Volume;
 
         // TODO: restore filters
+    }
+    
+    protected virtual ITrackQueueItem? LookupTrackQueueItem(LavalinkTrack receivedTrack, ITrackQueueItem? currentItem,
+        string? overridenTrackIdentifier)
+    {
+        return null;
     }
 
     internal async ValueTask UpdateFiltersAsync(PlayerFilterMapModel filterMap, CancellationToken cancellationToken = default)
@@ -720,14 +740,18 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
             return null;
         }
 
-        Debug.Assert(track.Identifier == CurrentItem?.Track?.Identifier);
+        Debug.Assert(track.Identifier == CurrentItem?.Track?.Identifier
+                     || (track.Identifier == _currentOverridenPlayableItemIdentifier && CurrentItem is not null));
 
-        if (track.Identifier == CurrentItem?.Track?.Identifier)
+        if (track.Identifier == CurrentItem?.Track?.Identifier
+            || (track.Identifier == _currentOverridenPlayableItemIdentifier && CurrentItem is not null))
         {
             return CurrentItem;
         }
 
-        return new TrackQueueItem(new TrackReference(track));
+        
+        return LookupTrackQueueItem(track, CurrentItem, null) 
+               ?? new TrackQueueItem(new TrackReference(track));
     }
 
     private static string? GetVoiceServerName(VoiceServer voiceServer)
