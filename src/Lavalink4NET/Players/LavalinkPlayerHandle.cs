@@ -100,7 +100,7 @@ internal sealed class LavalinkPlayerHandle<TPlayer, TOptions> : ILavalinkPlayerH
 
         if (_voiceState is not null)
         {
-            await CompleteAsync(isVoiceServerUpdated: true, cancellationToken).ConfigureAwait(false);
+            _ = CompleteAsync(isVoiceServerUpdated: true, cancellationToken).Preserve();
         }
     }
 
@@ -118,7 +118,7 @@ internal sealed class LavalinkPlayerHandle<TPlayer, TOptions> : ILavalinkPlayerH
 
         if (_voiceServer is not null)
         {
-            await CompleteAsync(isVoiceServerUpdated: false, cancellationToken).ConfigureAwait(false);
+            _ = CompleteAsync(isVoiceServerUpdated: false, cancellationToken).Preserve();
         }
     }
 
