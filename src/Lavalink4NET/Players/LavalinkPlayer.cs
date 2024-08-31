@@ -195,15 +195,15 @@ public class LavalinkPlayer : ILavalinkPlayer, ILavalinkPlayerListener
 
         try
         {
-            await NotifyTrackEndedAsync(previousItem, endReason, cancellationToken).ConfigureAwait(false);
-        }
-        finally
-        {
             if (Volatile.Read(ref _trackVersion) == currentTrackVersion && endReason is not TrackEndReason.Replaced)
             {
                 CurrentItem = null;
                 await UpdateStateAsync(PlayerState.NotPlaying, cancellationToken).ConfigureAwait(false);
             }
+        }
+        finally
+        {
+            await NotifyTrackEndedAsync(previousItem, endReason, cancellationToken).ConfigureAwait(false);
         }
     }
 
