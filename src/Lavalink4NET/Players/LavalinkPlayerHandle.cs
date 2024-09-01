@@ -198,7 +198,8 @@ internal sealed class LavalinkPlayerHandle<TPlayer, TOptions> : ILavalinkPlayerH
 
             if (initialTrack.Reference.IsPresent)
             {
-                playerProperties = playerProperties with { TrackData = initialTrack.Track!.ToString(), };
+                var playableTrack = await initialTrack.Reference.Track.GetPlayableTrackAsync(cancellationToken);
+                playerProperties = playerProperties with { TrackData = playableTrack.ToString()};
             }
             else
             {
