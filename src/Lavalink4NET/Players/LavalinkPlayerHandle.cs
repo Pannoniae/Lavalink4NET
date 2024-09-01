@@ -141,12 +141,25 @@ internal sealed class LavalinkPlayerHandle<TPlayer, TOptions> : ILavalinkPlayerH
         if (_value is TaskCompletionSource<ILavalinkPlayer> taskCompletionSource)
         {
             // _value is automatically set by CreatePlayerAsync
-            var player = await CreatePlayerAsync(cancellationToken).ConfigureAwait(false);
-
-            taskCompletionSource.TrySetResult(player);
-
-            Interlocked.Decrement(ref Diagnostics.PendingHandles);
-            Interlocked.Increment(ref Diagnostics.ActivePlayers);
+            try
+            {
+                // CreatePlayerAsync can throw if request to lavalink fails
+                // We should handle this to avoid never completed lavalink player handle
+                var player = await CreatePlayerAsync(cancellationToken).ConfigureAwait(false);
+                
+                taskCompletionSource.TrySetResult(player);
+                
+                Interlocked.Decrement(ref Diagnostics.PendingHandles);
+                Interlocked.Increment(ref Diagnostics.ActivePlayers);
+            }
+            catch (Exception e)
+            {
+                // Here we're passing CancellationToken.None to ensure what the player disposing event will properly
+                // clean up this handle from cache
+                await _playerContext.LifecycleNotifier!.NotifyDisposeAsync(_guildId, CancellationToken.None);
+                taskCompletionSource.TrySetException(e);
+                await DisposeAsync();
+            }
         }
         else
         {
@@ -198,7 +211,8 @@ internal sealed class LavalinkPlayerHandle<TPlayer, TOptions> : ILavalinkPlayerH
 
             if (initialTrack.Reference.IsPresent)
             {
-                playerProperties = playerProperties with { TrackData = initialTrack.Track!.ToString(), };
+                var playableTrack = await initialTrack.Reference.Track.GetPlayableTrackAsync(cancellationToken);
+                playerProperties = playerProperties with { TrackData = playableTrack.ToString()};
             }
             else
             {
@@ -208,6 +222,11 @@ internal sealed class LavalinkPlayerHandle<TPlayer, TOptions> : ILavalinkPlayerH
 
                 playerProperties = playerProperties with { Identifier = identifier, };
             }
+        }
+
+        if (_options.Value.InitialPosition is not null)
+        {
+            playerProperties = playerProperties with { Position = _options.Value.InitialPosition.Value };
         }
 
         if (_options.Value.InitialVolume is not null)
