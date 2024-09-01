@@ -211,6 +211,11 @@ internal sealed class LavalinkPlayerHandle<TPlayer, TOptions> : ILavalinkPlayerH
             }
         }
 
+        if (_options.Value.InitialPosition is not null)
+        {
+            playerProperties = playerProperties with { Position = _options.Value.InitialPosition.Value };
+        }
+
         if (_options.Value.InitialVolume is not null)
         {
             playerProperties = playerProperties with { Volume = _options.Value.InitialVolume.Value, };
