@@ -312,11 +312,10 @@ internal sealed class PlayerManager : IPlayerManager, IDisposable, IPlayerLifecy
 
         await using var _ = playerHandle.ConfigureAwait(false);
 
-        Debug.Assert(playerHandle.Player is not null);
-        Debug.Assert(playerHandle.Player is { State: PlayerState.Destroyed, });
-
+        // Player can be null if lavalink node will throw while creating player
         if (playerHandle.Player is not null)
         {
+            Debug.Assert(playerHandle.Player is { State: PlayerState.Destroyed, });
             var eventArgs = new PlayerDestroyedEventArgs(playerHandle.Player);
 
             await PlayerDestroyed
