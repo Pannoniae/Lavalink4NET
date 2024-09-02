@@ -46,4 +46,8 @@ public interface IPlayerManager
         CancellationToken cancellationToken = default)
         where TPlayer : class, ILavalinkPlayer
         where TOptions : LavalinkPlayerOptions;
+
+    ValueTask<TPlayer> JoinAsync<TPlayer, TOptions>(ulong guildId, ulong voiceChannelId, PlayerFactory<TPlayer, TOptions> playerFactory, IOptions<TOptions> options, ILavalinkSessionProvider? overridenLavalinkSessionProvider, CancellationToken cancellationToken = default)
+        where TPlayer : ILavalinkPlayer
+        where TOptions : LavalinkPlayerOptions;
 }
