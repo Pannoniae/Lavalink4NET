@@ -54,6 +54,13 @@ internal class PlayerManagerMock : IPlayerManager
     {
         throw new NotImplementedException();
     }
+    
+    public ValueTask<TPlayer> JoinAsync<TPlayer, TOptions>(ulong guildId, ulong voiceChannelId, PlayerFactory<TPlayer, TOptions> playerFactory,
+        IOptions<TOptions> options, ILavalinkSessionProvider? overridenLavalinkSessionProvider,
+        CancellationToken cancellationToken = default) where TPlayer : ILavalinkPlayer where TOptions : LavalinkPlayerOptions
+    {
+        throw new NotImplementedException();
+    }
 
     public bool TryGetPlayer(ulong guildId, [MaybeNullWhen(false)] out ILavalinkPlayer player)
     {
