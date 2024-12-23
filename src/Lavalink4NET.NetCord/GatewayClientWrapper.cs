@@ -24,7 +24,8 @@ internal sealed class GatewayClientWrapper : GatewayClientWrapperBase, IDiscordC
         _client.Ready += HandleReady;
     }
 
-    private ValueTask HandleReady(ReadyEventArgs arg) {
+    private ValueTask HandleReady(ReadyEventArgs arg)
+    {
         _ready.TrySetResult(true);
         return default;
     }
